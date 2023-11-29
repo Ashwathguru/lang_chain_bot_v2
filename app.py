@@ -7,9 +7,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
 def get_answer_csv(query: str) -> str:
-
     file = "raw.csv"
-
     # Create an agent using OpenAI and the Pandas dataframe
     agent = create_csv_agent(OpenAI(temperature=0), file, verbose=False)
     #agent = create_pandas_dataframe_agent(OpenAI(temperature=0), df, verbose=False)
