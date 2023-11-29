@@ -1,56 +1,30 @@
-from dotenv import load_dotenv
+import openai
 import streamlit as st
-from PyPDF2 import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chains.question_answering import load_qa_chain
+from langchain.agents import create_csv_agent, create_pandas_dataframe_agent
 from langchain.llms import OpenAI
-from langchain.callbacks import get_openai_callback
+
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 
-def main():
-    load_dotenv()
-    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-    st.set_page_config(page_title="Ask your PDF")
-    st.header("Ask your PDF 💬")
-    
-    # upload file
-    pdf = st.file_uploader("Upload your PDF", type="pdf")
-    
-    # extract the text
-    if pdf is not None:
-      pdf_reader = PdfReader(pdf)
-      text = ""
-      for page in pdf_reader.pages:
-        text += page.extract_text()
-        
-      # split into chunks
-      text_splitter = CharacterTextSplitter(
-        separator="\n",
-        chunk_size=1000,
-        chunk_overlap=200,
-        length_function=len
-      )
-      chunks = text_splitter.split_text(text)
-      
-      # create embeddings
-      embeddings = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-      knowledge_base = FAISS.from_texts(chunks, embeddings)
-      
-      # show user input
-      user_question = st.text_input("Ask a question about your PDF:")
-      if user_question:
-        docs = knowledge_base.similarity_search(user_question)
-        
-        llm = OpenAI()
-        chain = load_qa_chain(llm, chain_type="stuff")
-        with get_openai_callback() as cb:
-          response = chain.run(input_documents=docs, question=user_question)
-          print(cb)
-           
-        st.write(response)
-    
+def get_answer_csv(query: str) -> str:
 
-if __name__ == '__main__':
-    main()
+    file = "raw.csv"
+
+    # Create an agent using OpenAI and the Pandas dataframe
+    agent = create_csv_agent(OpenAI(temperature=0), file, verbose=False)
+    #agent = create_pandas_dataframe_agent(OpenAI(temperature=0), df, verbose=False)
+
+    # Run the agent on the given query and return the answer
+    #query = "whats the square root of the average age?"
+    answer = agent.run(query)
+    return answer
+
+
+st.header("Chat with TicketGPT")
+#uploaded_file = st.file_uploader("Upload a csv file", type=["csv"])
+
+#if uploaded_file is not None:
+query = st.text_area("Ask any question related to the tickets")
+button = st.button("Submit")
+if button:
+  st.write(get_answer_csv(query))
